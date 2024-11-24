@@ -1,23 +1,32 @@
-const errors = require('./../errors');
+import type { Request, Response } from "express";
+import type { InspectURL } from "./inspect_url";
+import { Error } from "../errors";
 
 // A Job encapsulates fetching multiple links for a single request
-class Job {
+export class Job {
     get ip() {
         return this.req.ip;
     }
 
-    constructor(req, res, isBulk) {
+    index: number;
+    remainingLinks: unknown[];
+    responses: Record<string, any>;
+    attempts: number;
+    max_attempts: number;
+
+
+
+    constructor(public req: Request, public res: Response) {
         this.req = req;
         this.res = res;
-        this.isBulk = isBulk;
         this.remainingLinks = [];
-
         this.index = 0;
-
         this.responses = {};
+        this.attempts = 0;
+        this.max_attempts = 3;
     }
 
-    add(link, price) {
+    add(link: InspectURL, price: number | undefined) {
         this.remainingLinks.push({
             link,
             price,
@@ -25,9 +34,7 @@ class Job {
         });
     }
 
-    getRemainingLinks() {
-        return this.remainingLinks;
-    }
+ 
 
     remainingSize() {
         return this.remainingLinks.length;
@@ -50,7 +57,7 @@ class Job {
             return;
         }
 
-        if (response instanceof errors.Error) {
+        if (response instanceof Error) {
             response = response.getJSON();
         }
 
@@ -69,7 +76,7 @@ class Job {
             return;
         }
 
-        if (this.isBulk || keys.length > 1) {
+        if (keys.length > 1) {
             this.res.json(this.responses);
         } else {
             const response = this.responses[keys[0]];
@@ -82,4 +89,3 @@ class Job {
     }
 }
 
-module.exports = Job;
